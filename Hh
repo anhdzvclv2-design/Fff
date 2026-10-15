@@ -1,0 +1,148 @@
+-- Roblox Script Hub: Fly, Speed, ESP, Aimbot, Target, Invisible
+-- Đã tích hợp sẵn UI Hub chuyên nghiệp
+
+local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/xHeptc/Kavo-UI-Library/main/source.lua"))()
+local Window = Library.CreateLib("ThanhDuy Hub VIP", "BloodTheme")
+
+-- Dynamic Tabs
+local MainTab = Window:NewTab("Main Features")
+local CombatTab = Window:NewTab("Combat & Target")
+local MiscTab = Window:NewTab("Misc")
+
+local MainSection = MainTab:NewSection("Player Movement")
+local CombatSection = CombatTab:NewSection("Aimbot & Target")
+local ESPSection = MainTab:NewSection("Visuals (ESP)")
+local MiscSection = MiscTab:NewSection("Stealth")
+
+---------------------------------------------------------
+-- 1. SPEED HACK
+---------------------------------------------------------
+local defaultSpeed = 16
+MainSection:NewSlider("WalkSpeed", "Điều chỉnh tốc độ di chuyển", 200, 16, function(s)
+    local char = game.Players.LocalPlayer.Character
+    if char and char:FindFirstChild("Humanoid") then
+        char.Humanoid.WalkSpeed = s
+    end
+end)
+
+---------------------------------------------------------
+-- 2. FLY HACK
+---------------------------------------------------------
+local flying = false
+local flySpeed = 50
+MainSection:NewToggle("Fly Hack", "Bật/Tắt chế độ bay", function(state)
+    flying = state
+    local player = game.Players.LocalPlayer
+    local char = player.Character or player.CharacterAdded:Wait()
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    
+    if flying and hrp then
+        local bv = Instance.new("BodyVelocity")
+        bv.Name = "FlyVelocity"
+        bv.MaxForce = Vector3.new(1e5, 1e5, 1e5)
+        bv.Velocity = Vector3.new(0, 0, 0)
+        bv.Parent = hrp
+        
+        task.spawn(function()
+            while flying and hrp:FindFirstChild("FlyVelocity") do
+                local cam = workspace.CurrentCamera
+                bv.Velocity = cam.CFrame.LookVector * flySpeed
+                task.wait()
+            end
+            if hrp:FindFirstChild("FlyVelocity") then
+                hrp.FlyVelocity:Destroy()
+            end
+        end)
+    else
+        if hrp and hrp:FindFirstChild("FlyVelocity") then
+            hrp.FlyVelocity:Destroy()
+        end
+    end
+end)
+
+---------------------------------------------------------
+-- 3. ESP PLAYER
+---------------------------------------------------------
+local espEnabled = false
+ESPSection:NewToggle("ESP Players", "Bật/Tắt nhìn xuyên tường người chơi", function(state)
+    espEnabled = state
+    for _, player in pairs(game.Players:GetPlayers()) do
+        if player ~= game.Players.LocalPlayer and player.Character then
+            if espEnabled then
+                if not player.Character:FindFirstChild("ESPHighlight") then
+                    local highlight = Instance.new("Highlight")
+                    highlight.Name = "ESPHighlight"
+                    highlight.FillColor = Color3.fromRGB(255, 0, 0)
+                    highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+                    highlight.FillTransparency = 0.5
+                    highlight.Parent = player.Character
+                end
+            else
+                if player.Character:FindFirstChild("ESPHighlight") then
+                    player.Character.ESPHighlight:Destroy()
+                end
+            end
+        end
+    end
+end)
+
+---------------------------------------------------------
+-- 4. AIMBOT TARGET LOCK
+---------------------------------------------------------
+local aimbotEnabled = false
+CombatSection:NewToggle("Aimbot Target Lock", "Khoá tâm tự động vào đầu đối thủ", function(state)
+    aimbotEnabled = state
+    task.spawn(function()
+        while aimbotEnabled do
+            local closestPlayer = nil
+            local shortestDistance = math.huge
+            local camera = workspace.CurrentCamera
+            local localPlayer = game.Players.LocalPlayer
+
+            for _, player in pairs(game.Players:GetPlayers()) do
+                if player ~= localPlayer and player.Character and player.Character:FindFirstChild("Head") then
+                    local pos = camera:WorldToViewportPoint(player.Character.Head.Position)
+                    local magnitude = (Vector2.new(pos.X, pos.Y) - Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)).Magnitude
+                    if magnitude < shortestDistance then
+                        closestPlayer = player
+                        shortestDistance = magnitude
+                    end
+                end
+            end
+
+            if closestPlayer and closestPlayer.Character and closestPlayer.Character:FindFirstChild("Head") then
+                camera.CFrame = CFrame.new(camera.CFrame.Position, closestPlayer.Character.Head.Position)
+            end
+            task.wait()
+        end
+    end)
+end)
+
+---------------------------------------------------------
+-- 5. TARGET FINDER
+---------------------------------------------------------
+CombatSection:NewTextBox("Target Finder", "Nhập tên người chơi để dịch chuyển tới", function(txt)
+    for _, player in pairs(game.Players:GetPlayers()) do
+        if string.sub(string.lower(player.Name), 1, #txt) == string.lower(txt) or string.sub(string.lower(player.DisplayName), 1, #txt) == string.lower(txt) then
+            local myChar = game.Players.LocalPlayer.Character
+            if myChar and myChar:FindFirstChild("HumanoidRootPart") and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                myChar.HumanoidRootPart.CFrame = player.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, 3)
+            end
+            break
+        end
+    end
+end)
+
+---------------------------------------------------------
+-- 6. INVISIBLE MODE
+---------------------------------------------------------
+MiscSection:NewToggle("Invisible Mode", "Tàng hình người chơi (Client-Side)", function(state)
+    local char = game.Players.LocalPlayer.Character
+    if char then
+        for _, part in pairs(char:GetDescendants()) do
+            if part:IsA("BasePart") or part:IsA("Decal") then
+                part.Transparency = state and 1 or 0
+            end
+        end
+    end
+end)
